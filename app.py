@@ -17,7 +17,7 @@ from chat import get_response
 # Flask Setup
 # ----------------------
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["https://www.medvisor.space"])
 
 # ----------------------
 # Hugging Face Hub Config
