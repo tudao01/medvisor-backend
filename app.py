@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 import cv2
 from flask import Flask, request, jsonify
+from flask import send_from_directory
 from flask_cors import CORS
 import tensorflow as tf
 from tensorflow.keras.models import load_model
@@ -17,7 +18,7 @@ from chat import get_response
 # Flask Setup
 # ----------------------
 app = Flask(__name__)
-CORS(app, origins=["https://www.medvisor.space"])
+CORS(app, origins=["*"])
 
 # ----------------------
 # Hugging Face Hub Config
@@ -184,6 +185,18 @@ def chat():
 def health_check():
     return jsonify({"status": "healthy", "message": "MedVisor AI Backend is running"})
 
+# Add static file serving routes
+@app.route('/static/uploads/<path:filename>')
+def serve_upload(filename):
+    return send_from_directory('static/uploads', filename)
+
+@app.route('/static/output/<path:filename>')
+def serve_output(filename):
+    return send_from_directory('static/output', filename)
+
+@app.route('/static/output/discs/<path:filename>')
+def serve_discs(filename):
+    return send_from_directory('static/output/discs', filename)
 # ----------------------
 # Run app
 # ----------------------
