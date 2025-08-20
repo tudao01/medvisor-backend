@@ -10,17 +10,43 @@ import traceback
 def main():
     """Main entry point for Hugging Face Spaces"""
     try:
+        print("Starting MedVisor AI on Hugging Face Spaces...")
+        print("Checking dependencies...")
+        
+        # Check if required modules are available
+        try:
+            import gradio as gr
+            print("✓ Gradio imported successfully")
+        except ImportError as e:
+            print(f"✗ Failed to import Gradio: {e}")
+            print("Please ensure gradio is installed: pip install gradio")
+            sys.exit(1)
+            
+        try:
+            import torch
+            print("✓ PyTorch imported successfully")
+        except ImportError as e:
+            print(f"✗ Failed to import PyTorch: {e}")
+            sys.exit(1)
+            
+        try:
+            import tensorflow as tf
+            print("✓ TensorFlow imported successfully")
+        except ImportError as e:
+            print(f"✗ Failed to import TensorFlow: {e}")
+            sys.exit(1)
+        
         # Import and create the Gradio interface
+        print("Importing MedVisor AI components...")
         from app_gradio import create_interface
         
-        print("🚀 Starting MedVisor AI on Hugging Face Spaces...")
-        print("📥 Downloading models from Hugging Face Hub...")
+        print("Downloading models from Hugging Face Hub...")
         
         # Create and launch the interface
         demo = create_interface()
         
-        print("✅ Models loaded successfully!")
-        print("🌐 Launching Gradio interface...")
+        print("Models loaded successfully!")
+        print("Launching Gradio interface...")
         
         # Launch with appropriate settings for Spaces
         demo.launch(
@@ -32,15 +58,15 @@ def main():
         )
         
     except ImportError as e:
-        print(f"❌ Import error: {e}")
-        print("📋 Available modules:")
+        print(f"Import error: {e}")
+        print("Available modules:")
         for module in sys.modules.keys():
             if "gradio" in module or "torch" in module or "tensorflow" in module:
                 print(f"  - {module}")
         sys.exit(1)
         
     except Exception as e:
-        print(f"❌ Error starting MedVisor AI: {e}")
+        print(f"Error starting MedVisor AI: {e}")
         traceback.print_exc()
         sys.exit(1)
 
