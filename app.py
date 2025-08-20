@@ -13,7 +13,7 @@ from chat import get_response
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["https://medvisor.space.com"])
 
 # Model setup
 def create_unet_model(num_classes=1, in_channels=3):
@@ -151,3 +151,4 @@ def chat():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
