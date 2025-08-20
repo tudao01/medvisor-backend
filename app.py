@@ -3,48 +3,56 @@ import torch
 import numpy as np
 from PIL import Image, ImageDraw
 import cv2
-from segmentation_models_pytorch import Unet
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tensorflow as tf
 from tensorflow.keras.models import load_model
+from segmentation_models_pytorch import Unet
+from huggingface_hub import hf_hub_download
+
 from prediction import split_image, make_predictions
 from chat import get_response
-import gdown
 
-# Initialize Flask app
+# ----------------------
+# Flask Setup
+# ----------------------
 app = Flask(__name__)
 CORS(app)
 
-# Google Drive links for your models
-GDRIVE_LINK_NONBINARY = "https://drive.google.com/uc?id=1ZerGVRg-BpT0v6V-DxqtiDS8hJOEaIem"
-GDRIVE_LINK_BINARY = "https://drive.google.com/uc?id=1XYxY9QLAHmqAUSQAtIYJWf_R3qB9wBLr"
-GDRIVE_LINK_UNET = "https://drive.google.com/uc?id=1S6N6TGIP0UYdbHzR2k5BXiBMhxNWDNIJ"
+# ----------------------
+# Hugging Face Hub Config
+# ----------------------
+REPO_ID = "your-username/your-model-repo"  # TODO: replace with your repo
 
 # Local paths
-NONBINARY_PATH = "nonBinaryIndividualPredictions.keras"
-BINARY_PATH = "binaryIndividualPredictions.keras"
+NONBINARY_PATH = "models/nonBinaryIndividualPredictions.keras"
+BINARY_PATH = "models/binaryIndividualPredictions.keras"
 UNET_PATH = "models/unet_spine_segmentation.pth"
 
+# ----------------------
 # Download models if missing
-def download_model_if_missing(model_path, gdrive_url):
-    folder = os.path.dirname(model_path)
-    if folder:  # only create folder if path includes a directory
-        os.makedirs(folder, exist_ok=True)
-    if not os.path.exists(model_path):
-        print(f"Downloading {model_path} from Google Drive...")
-        gdown.download(gdrive_url, model_path, quiet=False)
+# ----------------------
+def download_model_if_missing(local_path, filename):
+    if not os.path.exists(local_path):
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        print(f"Downloading {filename} from Hugging Face Hub...")
+        # Download and return the path, then copy to desired location if needed
+        downloaded_path = hf_hub_download(repo_id=REPO_ID, filename=filename)
+        # If the downloaded file isn't in the right location, move it
+        if downloaded_path != local_path:
+            import shutil
+            shutil.copy2(downloaded_path, local_path)
 
-# Download and load models
-download_model_if_missing(NONBINARY_PATH, GDRIVE_LINK_NONBINARY)
-download_model_if_missing(BINARY_PATH, GDRIVE_LINK_BINARY)
-download_model_if_missing(UNET_PATH, GDRIVE_LINK_UNET)
+download_model_if_missing(NONBINARY_PATH, "nonBinaryIndividualPredictions.keras")
+download_model_if_missing(BINARY_PATH, "binaryIndividualPredictions.keras")
+download_model_if_missing(UNET_PATH, "unet_spine_segmentation.pth")
 
-# Load TensorFlow models once
+# ----------------------
+# Load models
+# ----------------------
 nonBinaryModel = load_model(NONBINARY_PATH)
 binaryModel = load_model(BINARY_PATH)
 
-# PyTorch UNet model setup
 def create_unet_model(num_classes=1, in_channels=3):
     return Unet(
         encoder_name="resnet34",
@@ -55,7 +63,7 @@ def create_unet_model(num_classes=1, in_channels=3):
 
 def load_torch_model(weights_path):
     model = create_unet_model()
-    checkpoint = torch.load(weights_path, map_location='cpu')
+    checkpoint = torch.load(weights_path, map_location="cpu")
     model.load_state_dict(checkpoint, strict=False)
     model.eval()
     return model
@@ -63,7 +71,9 @@ def load_torch_model(weights_path):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 unetModel = load_torch_model(UNET_PATH).to(device)
 
-# Image preprocessing and bounding box
+# ----------------------
+# Image Processing Functions (MISSING IN YOUR CODE)
+# ----------------------
 def preprocess_image(image_path, target_size=(256, 256)):
     try:
         original_image = Image.open(image_path).convert("RGB")
@@ -89,7 +99,6 @@ def calculate_bounding_boxes(binary_mask, original_size, scale_x, scale_y, margi
             ))
     return bounding_boxes
 
-# Inference and visualization
 def infer_and_visualize(model, image_path, save_folder):
     os.makedirs(save_folder, exist_ok=True)
     original_image, image_np = preprocess_image(image_path)
@@ -111,67 +120,72 @@ def infer_and_visualize(model, image_path, save_folder):
     original_image.save(save_path)
     return save_path
 
-# Flask upload route
-@app.route('/upload', methods=['POST'])
+# ----------------------
+# Flask routes
+# ----------------------
+@app.route("/upload", methods=["POST"])
 def upload_image():
-    if 'file' not in request.files:
+    if "file" not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
     
-    file = request.files['file']
-    if file.filename == '':
+    file = request.files["file"]
+    if file.filename == "":
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        upload_folder = os.path.join(app.root_path, 'static', 'uploads')
+        # Save uploaded image
+        upload_folder = os.path.join(app.root_path, "static", "uploads")
         os.makedirs(upload_folder, exist_ok=True)
         file_path = os.path.join(upload_folder, file.filename)
         file.save(file_path)
 
-        output_folder = os.path.join(app.root_path, 'static', 'output')
+        # Run UNet inference
+        output_folder = os.path.join(app.root_path, "static", "output")
         processed_image_path = infer_and_visualize(unetModel, file_path, save_folder=output_folder)
 
         if processed_image_path is None:
             return jsonify({"error": "Failed to process image"}), 500
 
-        # Split and predict - FIXED: pass the correct path
+        # Split and predict
         discs_folder = os.path.join(output_folder, "discs")
         split_image(processed_image_path, discs_folder)
         disc_messages = make_predictions(discs_folder, nonBinaryModel, binaryModel)
 
+        # Build response
         processed_image_url = "/static/output/processed_image.png"
-        
-        # Get disc images
-        disc_image_urls = []
-        for filename in os.listdir(discs_folder):
-            if filename.endswith(('.png', '.jpg', '.jpeg')):
-                disc_image_urls.append(f"/static/output/discs/{filename}")
+        disc_image_urls = [
+            f"/static/output/discs/{filename}"
+            for filename in os.listdir(discs_folder)
+            if filename.endswith((".png", ".jpg", ".jpeg"))
+        ]
 
         return jsonify({
             "output_image_url": processed_image_url,
             "disc_images": [
-                {"url": url, "message": msg} 
+                {"url": url, "message": msg}
                 for url, msg in zip(disc_image_urls, disc_messages)
-            ]
+            ],
         })
 
     except Exception as e:
         print(f"Error in upload: {e}")
         return jsonify({"error": str(e)}), 500
 
-# Health check
-@app.route("/", methods=["GET"])
+@app.route("/chat", methods=["POST"])
+def chat():
+    try:
+        user_message = request.json.get("message", "")
+        response = get_response(user_message)
+        return jsonify({"response": response})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "healthy", "message": "MedVisor AI Backend is running"})
 
-# Chat endpoint
-@app.route("/get", methods=["GET"])
-def chat():
-    user_message = request.args.get('msg')
-    if user_message:
-        response = get_response(user_message)
-        return jsonify({"response": response})
-    return jsonify({"response": "I do not understand..."})
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+# ----------------------
+# Run app
+# ----------------------
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
