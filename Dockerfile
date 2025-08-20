@@ -4,7 +4,7 @@
 FROM python:3.12-slim AS build
 WORKDIR /app
 
-# Install system dependencies for ML libraries
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
@@ -18,8 +18,8 @@ RUN python -m pip install --upgrade pip
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app code and pre-downloaded models
-COPY ./app ./app
+# Copy all code and models
+COPY . .
 
 # ------------------------------
 # Stage 2: Final image
@@ -30,14 +30,11 @@ WORKDIR /app
 # Copy installed Python packages from build stage
 COPY --from=build /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 
-# Copy app code and models from build stage
-COPY --from=build /app ./app
+# Copy code and models from build stage
+COPY --from=build /app .
 
-# Set environment variables (optional)
+# Optional: environment variable for TF
 ENV TF_ENABLE_ONEDNN_OPTS=0
-
-# Set working directory to app
-WORKDIR /app/app
 
 # Expose port for Railway
 EXPOSE 5000
