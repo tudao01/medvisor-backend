@@ -3,7 +3,7 @@ services:
     name: medvisor-backend
     env: python
     plan: free
-    buildCommand: pip install -r requirements-optimized.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     envVars:
       - key: PYTHON_VERSION
@@ -12,3 +12,4 @@ services:
         value: production
     healthCheckPath: /
     autoDeploy: true
+
