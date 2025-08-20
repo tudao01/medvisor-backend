@@ -28,8 +28,10 @@ UNET_PATH = "models/unet_spine_segmentation.pth"
 
 # Download models if missing
 def download_model_if_missing(model_path, gdrive_url):
+    folder = os.path.dirname(model_path)
+    if folder:  # only create folder if path includes a directory
+        os.makedirs(folder, exist_ok=True)
     if not os.path.exists(model_path):
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
         print(f"Downloading {model_path} from Google Drive...")
         gdown.download(gdrive_url, model_path, quiet=False)
 
