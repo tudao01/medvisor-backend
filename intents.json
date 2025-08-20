@@ -1,0 +1,197 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": [
+        "Hi",
+        "Hey",
+        "How are you",
+        "Is anyone there?",
+        "Hello",
+        "Good day",
+        "Hey there",
+        "What's up"
+      ],
+      "responses": [
+        "Hi, how can I assist you with your orthopedic health today?",
+        "Hello, what can I do for you regarding your spine or joints?",
+        "Hi there! Need help with orthopedic or spine-related health issues?",
+        "Hello! How can I help you with your spine and joint care?"
+      ]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": [
+        "Bye",
+        "See you later",
+        "Goodbye",
+        "Take care",
+        "Catch you later",
+        "See you soon"
+      ],
+      "responses": [
+        "Take care of your joints and spine! Bye!",
+        "Goodbye, stay healthy and active!",
+        "See you later. Keep your joints and spine healthy!",
+        "Take care! Hope to talk soon about your spine health!"
+      ]
+    },
+    {
+      "tag": "spondylolisthesis",
+      "patterns": [
+        "How can I tell if I have spondylolisthesis?",
+        "What are the symptoms of spondylolisthesis?",
+        "How do I know if I have spondylolisthesis?",
+        "What causes spondylolisthesis?"
+      ],
+      "responses": [
+        "Spondylolisthesis is when one vertebra slips forward over another. Symptoms often include lower back pain, leg pain, and stiffness, especially after prolonged activity. It can also cause difficulty standing or walking."
+      ]
+    },
+    {
+      "tag": "endplate_issues",
+      "patterns": [
+        "What are the symptoms of endplate issues?",
+        "How do I know if I have endplate issues?",
+        "What are endplate problems?",
+        "What is an endplate issue in the spine?"
+      ],
+      "responses": [
+        "Endplate issues typically involve degeneration of the vertebral endplates. Symptoms can include localized back pain, stiffness, and changes observed in MRI scans. It can also lead to conditions like Modic changes."
+      ]
+    },
+    {
+      "tag": "modic_changes",
+      "patterns": [
+        "What are Modic changes?",
+        "What symptoms are associated with Modic changes?",
+        "How do Modic changes affect the spine?",
+        "What causes Modic changes?"
+      ],
+      "responses": [
+        "Modic changes refer to abnormalities in the vertebral endplates, often seen in MRI scans. Symptoms can include chronic back pain, stiffness, and reduced mobility. They are commonly linked with disc degeneration and can lead to long-term discomfort."
+      ]
+    },
+    {
+      "tag": "disc_narrowing",
+      "patterns": [
+        "What is disc narrowing?",
+        "What causes disc narrowing?",
+        "How do I know if I have disc narrowing?",
+        "What happens if my discs narrow?"
+      ],
+      "responses": [
+        "Disc narrowing refers to a decrease in the space between two vertebrae. This can lead to pain, stiffness, and potentially nerve compression, which might cause tingling or weakness in the legs. It often results from aging, injury, or degenerative disc disease."
+      ]
+    },
+    {
+      "tag": "disc_bulging",
+      "patterns": [
+        "What are the symptoms of disc bulging?",
+        "How do I know if I have a bulging disc?",
+        "What is a bulging disc?",
+        "What can cause disc bulging?"
+      ],
+      "responses": [
+        "A bulging disc can cause localized back pain, radiating pain in the legs (sciatica), numbness, and weakness if the bulging disc presses on nearby nerves. It's commonly caused by aging, wear and tear, or injury."
+      ]
+    },
+    {
+      "tag": "herniated_disc",
+      "patterns": [
+        "What is a herniated disc?",
+        "What are the symptoms of a herniated disc?",
+        "How do I know if I have a herniated disc?",
+        "What causes a herniated disc?"
+      ],
+      "responses": [
+        "A herniated disc occurs when the gel-like material inside a disc leaks out, pressing on nearby nerves. Symptoms include severe back pain, radiating pain down the legs, and potential numbness or weakness. It's often caused by wear and tear or a sudden injury."
+      ]
+    },
+    {
+      "tag": "diagnosis",
+      "patterns": [
+        "How is back pain diagnosed?",
+        "What tests are done for spine issues?",
+        "What tests should I take for joint pain?",
+        "What kind of doctor should I see for back pain?"
+      ],
+      "responses": [
+        "Diagnosis typically involves a physical exam, imaging tests like X-rays or MRIs, and sometimes blood tests to identify underlying conditions like arthritis or disc degeneration. You should consult a spine specialist or orthopedic doctor for a proper diagnosis."
+      ]
+    },
+    {
+      "tag": "prevention",
+      "patterns": [
+        "How can I prevent back pain?",
+        "What can I do to protect my joints?",
+        "How can I avoid spine problems?",
+        "How do I keep my back healthy?"
+      ],
+      "responses": [
+        "Maintaining good posture, exercising regularly, lifting properly, and keeping a healthy weight are some of the key strategies for preventing back pain and joint issues. Stretching and staying active can also help maintain flexibility and strength in the spine."
+      ]
+    },
+    {
+      "tag": "treatment_options",
+      "patterns": [
+        "What are the treatment options for joint pain?",
+        "How is back pain treated?",
+        "What can I do for a herniated disc?",
+        "What is the best treatment for disc bulging?"
+      ],
+      "responses": [
+        "Treatment options for spine and joint issues include physical therapy, medications, injections, and sometimes surgery. The best treatment depends on the severity and type of condition. Conservative treatments like physical therapy are often recommended before considering surgery."
+      ]
+    },
+    {
+      "tag": "exercise_advice",
+      "patterns": [
+        "What exercises can I do for my back?",
+        "What exercises help with spine health?",
+        "Can exercise help with disc herniation?",
+        "What should I do for a sore back?"
+      ],
+      "responses": [
+        "Strengthening your core and back muscles is essential for spine health. Low-impact exercises such as swimming, walking, and cycling are also great for managing spine and joint issues. Stretching and flexibility exercises can improve mobility and reduce pain."
+      ]
+    },
+    {
+      "tag": "symptom_management",
+      "patterns": [
+        "How can I relieve back pain at home?",
+        "What can I do for sore joints?",
+        "How can I manage my pain without medication?",
+        "Is heat or cold better for back pain?"
+      ],
+      "responses": [
+        "Applying heat or ice, taking over-the-counter pain medications like ibuprofen, and performing gentle stretching exercises can help relieve back pain at home. Resting and avoiding activities that worsen the pain are also important."
+      ]
+    },
+    {
+      "tag": "lifestyle_changes",
+      "patterns": [
+        "What lifestyle changes can help prevent disc narrowing?",
+        "How can I keep my spine healthy as I age?",
+        "What can I do to protect my joints long-term?"
+      ],
+      "responses": [
+        "Maintaining a healthy weight, practicing good posture, avoiding repetitive motions, and avoiding heavy lifting can help protect your spine and joints. Regular exercise to strengthen muscles around the spine is also crucial for long-term joint health."
+      ]
+    },
+    {
+      "tag": "funny",
+      "patterns": [
+        "Tell me a joke!",
+        "Tell me something funny!",
+        "Do you know a joke?",
+        "Make me laugh!"
+      ],
+      "responses": [
+        "Why did the chiropractor bring a ladder to work? Because they wanted to reach new heights in back care!",
+        "Why don't skeletons ever fight each other? They don't have the guts!",
+        "What do you call a back problem that can't be solved? A spinal dilemma!"
+      ]
+    }
+  ]
+}
