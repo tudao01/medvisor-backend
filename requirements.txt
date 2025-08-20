@@ -8,6 +8,8 @@ torchvision==0.17.2+cpu
 -f https://download.pytorch.org/whl/torch_stable.html
 segmentation-models-pytorch==0.3.4
 tensorflow-cpu
+pandas==2.2.1
+
 
 
 
