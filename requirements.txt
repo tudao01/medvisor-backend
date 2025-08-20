@@ -9,6 +9,8 @@ torchvision==0.17.2+cpu
 segmentation-models-pytorch==0.3.4
 tensorflow-cpu
 pandas==2.2.1
+matplotlib==3.8.0
+nltk==3.8.1
 
 
 
