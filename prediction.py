@@ -20,9 +20,6 @@ def split_image(input_image_path):
     Splits the uploaded image into discs and saves them into a subfolder.
     """
     try:
-        output_dir = "static/output/discs"
-        os.makedirs(output_dir, exist_ok=True)
-
         # Create output discs folder relative to input image
         output_dir = os.path.join(os.path.dirname(input_image_path), "discs")
         os.makedirs(output_dir, exist_ok=True)
@@ -35,6 +32,9 @@ def split_image(input_image_path):
 
         # Load and process the image
         image = cv2.imread(input_image_path)
+        if image is None:
+            return {"error": f"Could not load image from {input_image_path}"}
+            
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         # Red color mask
@@ -59,7 +59,7 @@ def split_image(input_image_path):
         return output_dir  # return the folder for predictions
 
     except Exception as e:
-        print(e)
+        print(f"Error in split_image: {e}")
         return {"error": str(e)}
 
 
@@ -69,38 +69,42 @@ def make_predictions(discs_folder, nonBinaryModel, binaryModel):
     """
     try:
         messages = []
-        for filename in os.listdir(discs_folder):
-            if filename.endswith(".png"):
-                img_path = os.path.join(discs_folder, filename)
+        disc_files = [f for f in os.listdir(discs_folder) if f.endswith(".png")]
+        
+        if not disc_files:
+            return ["No disc images found for prediction"]
+            
+        for filename in disc_files:
+            img_path = os.path.join(discs_folder, filename)
 
-                # Preprocess
-                img = Image.open(img_path).convert("RGB")
-                img = img.resize((224, 224))
-                img_array = np.array(img)
-                img_preprocessed = tf.keras.applications.resnet50.preprocess_input(img_array)
-                img_preprocessed = np.expand_dims(img_preprocessed, axis=0)
+            # Preprocess
+            img = Image.open(img_path).convert("RGB")
+            img = img.resize((224, 224))
+            img_array = np.array(img)
+            img_preprocessed = tf.keras.applications.resnet50.preprocess_input(img_array)
+            img_preprocessed = np.expand_dims(img_preprocessed, axis=0)
 
-                # Predictions
-                nonBinaryPred = nonBinaryModel.predict(img_preprocessed)
-                binaryPred = binaryModel.predict(img_preprocessed)
+            # Predictions
+            nonBinaryPred = nonBinaryModel.predict(img_preprocessed, verbose=0)
+            binaryPred = binaryModel.predict(img_preprocessed, verbose=0)
 
-                predicted_pfirrman = np.argmax(nonBinaryPred[0]) + 1
-                predicted_modic = np.argmax(nonBinaryPred[1])
+            predicted_pfirrman = np.argmax(nonBinaryPred[0]) + 1
+            predicted_modic = np.argmax(nonBinaryPred[1])
 
-                msg = (
-                    f"Pfirrman Grade: {predicted_pfirrman}\n"
-                    f"Modic: {predicted_modic}\n"
-                    f"Up Endplate: {binaryPred[0][0][0]:.2f}\n"
-                    f"Low Endplate: {binaryPred[1][0][0]:.2f}\n"
-                    f"Disc Herniation: {binaryPred[2][0][0]:.2f}\n"
-                    f"Disc Narrowing: {binaryPred[3][0][0]:.2f}\n"
-                    f"Disc Bulging: {binaryPred[4][0][0]:.2f}\n"
-                    f"Spondylilisthesis: {binaryPred[5][0][0]:.2f}\n"
-                )
-                messages.append(msg)
+            msg = (
+                f"Pfirrman Grade: {predicted_pfirrman}\n"
+                f"Modic: {predicted_modic}\n"
+                f"Up Endplate: {binaryPred[0][0][0]:.2f}\n"
+                f"Low Endplate: {binaryPred[1][0][0]:.2f}\n"
+                f"Disc Herniation: {binaryPred[2][0][0]:.2f}\n"
+                f"Disc Narrowing: {binaryPred[3][0][0]:.2f}\n"
+                f"Disc Bulging: {binaryPred[4][0][0]:.2f}\n"
+                f"Spondylilisthesis: {binaryPred[5][0][0]:.2f}\n"
+            )
+            messages.append(msg)
 
         return messages
 
     except Exception as e:
-        print(e)
+        print(f"Error in make_predictions: {e}")
         return {"error": str(e)}
