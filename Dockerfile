@@ -1,11 +1,8 @@
 # Multi-stage build for optimized Python backend
-FROM python:3.9-slim as builder
+FROM python:3.9-alpine
 
 # Install system dependencies for building
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache gcc g++ musl-dev libffi-dev
 
 # Create virtual environment
 RUN python -m venv /opt/venv
@@ -58,3 +55,4 @@ ENV FLASK_ENV=production
 
 # Run the application
 CMD ["python", "app.py"]
+
