@@ -4,47 +4,64 @@ import numpy as np
 from PIL import Image, ImageDraw
 import cv2
 from segmentation_models_pytorch import Unet
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tensorflow as tf
-from prediction import split_image
-from prediction import make_predictions
+from tensorflow.keras.models import load_model
+from prediction import split_image, make_predictions
 from chat import get_response
+import gdown
 
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 
-# Model setup
+# Google Drive links for your models
+GDRIVE_LINK_NONBINARY = "https://drive.google.com/uc?id=1ZerGVRg-BpT0v6V-DxqtiDS8hJOEaIem"
+GDRIVE_LINK_BINARY = "https://drive.google.com/uc?id=1XYxY9QLAHmqAUSQAtIYJWf_R3qB9wBLr"
+GDRIVE_LINK_UNET = "https://drive.google.com/uc?id=1S6N6TGIP0UYdbHzR2k5BXiBMhxNWDNIJ"
+
+# Local paths
+NONBINARY_PATH = "nonBinaryIndividualPredictions.keras"
+BINARY_PATH = "binaryIndividualPredictions.keras"
+UNET_PATH = "models/unet_spine_segmentation.pth"
+
+# Download models if missing
+def download_model_if_missing(model_path, gdrive_url):
+    if not os.path.exists(model_path):
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        print(f"Downloading {model_path} from Google Drive...")
+        gdown.download(gdrive_url, model_path, quiet=False)
+
+# Download and load models
+download_model_if_missing(NONBINARY_PATH, GDRIVE_LINK_NONBINARY)
+download_model_if_missing(BINARY_PATH, GDRIVE_LINK_BINARY)
+download_model_if_missing(UNET_PATH, GDRIVE_LINK_UNET)
+
+# Load TensorFlow models once
+nonBinaryModel = load_model(NONBINARY_PATH)
+binaryModel = load_model(BINARY_PATH)
+
+# PyTorch UNet model setup
 def create_unet_model(num_classes=1, in_channels=3):
-    model = Unet(
+    return Unet(
         encoder_name="resnet34",
         encoder_weights="imagenet",
         in_channels=in_channels,
         classes=num_classes,
     )
-    return model
 
-# Load the model and weights
 def load_torch_model(weights_path):
     model = create_unet_model()
-    try:
-        checkpoint = torch.load(weights_path)
-        model.load_state_dict(checkpoint, strict=False)
-    except FileNotFoundError:
-        print(f"Error: Model weights not found at {weights_path}")
-        return None
+    checkpoint = torch.load(weights_path, map_location='cpu')
+    model.load_state_dict(checkpoint, strict=False)
     model.eval()
     return model
 
-# Initialize device and model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_path = os.path.join("models", "unet_spine_segmentation.pth")
-model = load_torch_model(model_path)
-if model:
-    model = model.to(device)
+unetModel = load_torch_model(UNET_PATH).to(device)
 
-# Image preprocessing and bounding box visualization
+# Image preprocessing and bounding box
 def preprocess_image(image_path, target_size=(256, 256)):
     try:
         original_image = Image.open(image_path).convert("RGB")
@@ -61,7 +78,6 @@ def calculate_bounding_boxes(binary_mask, original_size, scale_x, scale_y, margi
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         if h < 100:
-            # Scale and enlarge bounding box
             x, y, w, h = int(x * scale_x), int(y * scale_y), int(w * scale_x), int(h * scale_y)
             bounding_boxes.append((
                 max(0, x - margin),
@@ -73,31 +89,27 @@ def calculate_bounding_boxes(binary_mask, original_size, scale_x, scale_y, margi
 
 # Inference and visualization
 def infer_and_visualize(model, image_path, save_folder):
+    os.makedirs(save_folder, exist_ok=True)
     original_image, image_np = preprocess_image(image_path)
     if original_image is None:
         return None
-    
-    # Prepare image tensor
-    image_tensor = torch.tensor(image_np, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0).to(device)
+
+    image_tensor = torch.tensor(image_np, dtype=torch.float32).permute(2,0,1).unsqueeze(0).to(device)
     with torch.no_grad():
         output = model(image_tensor)
-        predicted_mask = torch.sigmoid(output).cpu().numpy()[0, 0]
+        predicted_mask = torch.sigmoid(output).cpu().numpy()[0,0]
     binary_mask = (predicted_mask > 0.5).astype(np.uint8) * 255
 
-    # Draw bounding boxes
     draw_original = ImageDraw.Draw(original_image)
-    scale_x, scale_y = original_image.size[0] / 256.0, original_image.size[1] / 256.0
-    for x1, y1, x2, y2 in calculate_bounding_boxes(binary_mask, original_image.size, scale_x, scale_y):
-        draw_original.rectangle([x1, y1, x2, y2], outline="red", width=5)
+    scale_x, scale_y = original_image.size[0]/256.0, original_image.size[1]/256.0
+    for x1,y1,x2,y2 in calculate_bounding_boxes(binary_mask, original_image.size, scale_x, scale_y):
+        draw_original.rectangle([x1,y1,x2,y2], outline="red", width=5)
 
-    # Save and display results directly in static/output
-    output_filename = "processed_image.png"
-    save_path = os.path.join(save_folder, output_filename)
+    save_path = os.path.join(save_folder, "processed_image.png")
     original_image.save(save_path)
-    
     return save_path
 
-# Flask route to handle image upload
+# Flask upload route
 @app.route('/upload', methods=['POST'])
 def upload_image():
     if 'file' not in request.files:
@@ -106,51 +118,55 @@ def upload_image():
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
-    
+
     try:
         upload_folder = os.path.join(app.root_path, 'static', 'uploads')
         os.makedirs(upload_folder, exist_ok=True)
         file_path = os.path.join(upload_folder, file.filename)
         file.save(file_path)
-        
-        output_folder = os.path.join(app.root_path, 'static', 'output')
-        os.makedirs(output_folder, exist_ok=True)
-        output_path = infer_and_visualize(model, file_path, save_folder=output_folder)
 
-        split_image()
-        disc_messages = make_predictions()
+        output_folder = os.path.join(app.root_path, 'static', 'output')
+        processed_image_path = infer_and_visualize(unetModel, file_path, save_folder=output_folder)
+
+        if processed_image_path is None:
+            return jsonify({"error": "Failed to process image"}), 500
+
+        # Split and predict - FIXED: pass the correct path
+        discs_folder = os.path.join(output_folder, "discs")
+        split_image(processed_image_path, discs_folder)
+        disc_messages = make_predictions(discs_folder, nonBinaryModel, binaryModel)
 
         processed_image_url = "/static/output/processed_image.png"
-        discs_folder = "./static/output/discs"
-        disc_image_urls = [
-            f"/static/output/discs/{filename}" 
-            for filename in os.listdir(discs_folder)
-            if filename.endswith(('.png', '.jpg', '.jpeg'))
-        ]
-        if output_path:
-            return jsonify({
-                "output_image_url": processed_image_url,
-                "disc_images": [
-                    {"url": url, "message": message}
-                    for url, message in zip(disc_image_urls, disc_messages)
-                ]
-            })
-        else:
-            return jsonify({"error": "Failed to process the image"}), 500
+        
+        # Get disc images
+        disc_image_urls = []
+        for filename in os.listdir(discs_folder):
+            if filename.endswith(('.png', '.jpg', '.jpeg')):
+                disc_image_urls.append(f"/static/output/discs/{filename}")
+
+        return jsonify({
+            "output_image_url": processed_image_url,
+            "disc_images": [
+                {"url": url, "message": msg} 
+                for url, msg in zip(disc_image_urls, disc_messages)
+            ]
+        })
+
     except Exception as e:
+        print(f"Error in upload: {e}")
         return jsonify({"error": str(e)}), 500
-    
+
+# Health check
 @app.route("/", methods=["GET"])
 def health_check():
     return jsonify({"status": "healthy", "message": "MedVisor AI Backend is running"})
 
+# Chat endpoint
 @app.route("/get", methods=["GET"])
 def chat():
-    user_message = request.args.get('msg')  # Get user input from URL query string
-    print(f"Received message: {user_message}")
+    user_message = request.args.get('msg')
     if user_message:
-        response = get_response(user_message)  # Get chatbot response
-        print(f"Generated response: {response}")
+        response = get_response(user_message)
         return jsonify({"response": response})
     return jsonify({"response": "I do not understand..."})
 

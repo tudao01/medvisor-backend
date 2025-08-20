@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy all code and models
 COPY . .
+COPY models/ ./models/
 
 # ------------------------------
 # Stage 2: Final image
@@ -40,4 +41,4 @@ ENV TF_ENABLE_ONEDNN_OPTS=0
 EXPOSE 5000
 
 # Run Flask app
-CMD ["python", "main.py"]
+CMD ["python", "app.py"]

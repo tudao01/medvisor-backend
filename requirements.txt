@@ -11,7 +11,7 @@ tensorflow-cpu
 pandas==2.2.1
 matplotlib==3.8.0
 nltk==3.8.1
-
+gdown==4.7.1
 
 
 

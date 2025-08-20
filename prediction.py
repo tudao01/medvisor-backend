@@ -15,91 +15,92 @@ from collections import OrderedDict
 from tensorflow.keras.models import load_model
 import cv2
 
-def split_image():      
-    nonBinaryModel = load_model('nonBinaryIndividualPredictions.keras')
-    binaryModel = load_model('binaryIndividualPredictions.keras')
+def split_image(input_image_path):
+    """
+    Splits the uploaded image into discs and saves them into a subfolder.
+    """
+    try:
+        output_dir = "static/output/discs"
+        os.makedirs(output_dir, exist_ok=True)
 
-    # Specify the input image path
-    input_image = "static/output/processed_image.png"  # Replace with your specific image name
-    output_dir = "static/output/discs"
-    os.makedirs(output_dir, exist_ok=True)
+        # Create output discs folder relative to input image
+        output_dir = os.path.join(os.path.dirname(input_image_path), "discs")
+        os.makedirs(output_dir, exist_ok=True)
 
-    for file in os.listdir(output_dir):
-        file_path = os.path.join(output_dir, file)
-        if os.path.isfile(file_path):
-            os.remove(file_path)
+        # Clear previous disc images
+        for file in os.listdir(output_dir):
+            file_path = os.path.join(output_dir, file)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
 
-    # Load and process the image
-    image = cv2.imread(input_image)
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        # Load and process the image
+        image = cv2.imread(input_image_path)
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    # Define red color ranges in HSV
-    lower_red1 = np.array([0, 120, 70])
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([170, 120, 70])
-    upper_red2 = np.array([180, 255, 255])
+        # Red color mask
+        lower_red1 = np.array([0, 120, 70])
+        upper_red1 = np.array([10, 255, 255])
+        lower_red2 = np.array([170, 120, 70])
+        upper_red2 = np.array([180, 255, 255])
+        mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+        mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+        mask = mask1 + mask2
 
-    # Apply the red color mask
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    mask = mask1 + mask2
+        # Find contours
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[1])  # top to bottom
 
-    # Find contours of the red areas
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Save each contour as a separate image
+        for i, contour in enumerate(contours):
+            x, y, w, h = cv2.boundingRect(contour)
+            disc = image[y:y+h, x:x+w]
+            cv2.imwrite(os.path.join(output_dir, f"disc_{i + 1}.png"), disc)
 
-    # Sort contours from top to bottom by y-coordinate
-    contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[1])
+        return output_dir  # return the folder for predictions
 
-    # Loop through each contour and save the bounding boxes as separate images
-    for i, contour in enumerate(contours):
-        x, y, w, h = cv2.boundingRect(contour)
-        red_box = image[y:y+h, x:x+w]
-        output_path = os.path.join(output_dir, f"disc_{i + 1}.png")
-        cv2.imwrite(output_path, red_box)
+    except Exception as e:
+        print(e)
+        return {"error": str(e)}
 
 
-def make_predictions():
+def make_predictions(discs_folder, nonBinaryModel, binaryModel):
+    """
+    Runs predictions on all disc images in the folder.
+    """
+    try:
+        messages = []
+        for filename in os.listdir(discs_folder):
+            if filename.endswith(".png"):
+                img_path = os.path.join(discs_folder, filename)
 
-    nonBinaryModel = load_model('nonBinaryIndividualPredictions.keras')
-    binaryModel = load_model('binaryIndividualPredictions.keras')
-    # Define the directory containing images to process
-    input_dir = "static/output/discs"
-    message_array = []
-    # Loop through each image in the directory
-    disc_num = 1
-    for filename in os.listdir(input_dir):
-        if filename.endswith(".png"):  # Adjust the extension if needed
-            test_image_path = os.path.join(input_dir, filename)
-            
-            # Load and preprocess the image
-            img = Image.open(test_image_path).convert('RGB')
-            img_resized = img.resize((224, 224))
-            img_array = np.array(img_resized)
+                # Preprocess
+                img = Image.open(img_path).convert("RGB")
+                img = img.resize((224, 224))
+                img_array = np.array(img)
+                img_preprocessed = tf.keras.applications.resnet50.preprocess_input(img_array)
+                img_preprocessed = np.expand_dims(img_preprocessed, axis=0)
 
-            # Preprocess the image for ResNet50
-            img_preprocessed = tf.keras.applications.resnet50.preprocess_input(img_array)
-            img_preprocessed = np.expand_dims(img_preprocessed, axis=0)  # Add batch dimension
+                # Predictions
+                nonBinaryPred = nonBinaryModel.predict(img_preprocessed)
+                binaryPred = binaryModel.predict(img_preprocessed)
 
-            # Run predictions with your models
-            nonBinaryPredictions = nonBinaryModel.predict(img_preprocessed)
-            binaryPredictions = binaryModel.predict(img_preprocessed)
+                predicted_pfirrman = np.argmax(nonBinaryPred[0]) + 1
+                predicted_modic = np.argmax(nonBinaryPred[1])
 
-            # Interpret non-binary predictions
-            predicted_pfirrman = np.argmax(nonBinaryPredictions[0]) + 1  # Add 1 if classes are 1-5
-            predicted_modic = np.argmax(nonBinaryPredictions[1])
-     
-            message = (
-                f"Pfirrman Grade: {predicted_pfirrman}\n"
-                f"Modic: {predicted_modic}\n"
-                f"Up Endplate: {binaryPredictions[0][0][0]:.2f}\n"
-                f"Low Endplate: {binaryPredictions[1][0][0]:.2f}\n"
-                f"Disc Herniation: {binaryPredictions[2][0][0]:.2f}\n"
-                f"Disc Narrowing: {binaryPredictions[3][0][0]:.2f}\n"
-                f"Disc Bulging: {binaryPredictions[4][0][0]:.2f}\n"
-                f"Spondylilisthesis: {binaryPredictions[5][0][0]:.2f}\n"
-            )
-            message_array.append(message)
-            disc_num += 1
+                msg = (
+                    f"Pfirrman Grade: {predicted_pfirrman}\n"
+                    f"Modic: {predicted_modic}\n"
+                    f"Up Endplate: {binaryPred[0][0][0]:.2f}\n"
+                    f"Low Endplate: {binaryPred[1][0][0]:.2f}\n"
+                    f"Disc Herniation: {binaryPred[2][0][0]:.2f}\n"
+                    f"Disc Narrowing: {binaryPred[3][0][0]:.2f}\n"
+                    f"Disc Bulging: {binaryPred[4][0][0]:.2f}\n"
+                    f"Spondylilisthesis: {binaryPred[5][0][0]:.2f}\n"
+                )
+                messages.append(msg)
 
-    print(message_array)
-    return message_array
+        return messages
+
+    except Exception as e:
+        print(e)
+        return {"error": str(e)}
