@@ -22,7 +22,7 @@ CORS(app)
 # ----------------------
 # Hugging Face Hub Config
 # ----------------------
-REPO_ID = "your-username/your-model-repo"  # TODO: replace with your repo
+REPO_ID = "tudao01/spine"
 
 # Local paths
 NONBINARY_PATH = "models/nonBinaryIndividualPredictions.keras"
