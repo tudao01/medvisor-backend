@@ -13,6 +13,6 @@ matplotlib==3.8.0
 nltk==3.8.1
 gdown==4.7.1
 huggingface_hub
-
+gunicorn==21.2.0
 
 

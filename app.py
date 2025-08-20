@@ -203,5 +203,6 @@ def serve_discs(filename):
 import os
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
+    host = os.environ.get("HOST", "0.0.0.0")
+    print(f"Starting server on {host}:{port}")
+    app.run(host=host, port=port, debug=False)
