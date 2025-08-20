@@ -13,7 +13,7 @@ from chat import get_response
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, origins=["https://medvisor.space.com"])
+CORS(app)
 
 # Model setup
 def create_unet_model(num_classes=1, in_channels=3):
@@ -139,6 +139,10 @@ def upload_image():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
+@app.route("/", methods=["GET"])
+def health_check():
+    return jsonify({"status": "healthy", "message": "MedVisor AI Backend is running"})
+
 @app.route("/get", methods=["GET"])
 def chat():
     user_message = request.args.get('msg')  # Get user input from URL query string
@@ -150,5 +154,5 @@ def chat():
     return jsonify({"response": "I do not understand..."})
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
