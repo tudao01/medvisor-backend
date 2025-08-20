@@ -39,7 +39,8 @@ def load_torch_model(weights_path):
 
 # Initialize device and model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = load_torch_model("unet_spine_segmentation.pth")
+model_path = os.path.join("models", "unet_spine_segmentation.pth")
+model = load_torch_model(model_path)
 if model:
     model = model.to(device)
 
